@@ -252,11 +252,19 @@ body.ciemny svg line[stroke='#e5e7eb']{stroke:#374151}
 
 
 SKRYPT_MOTYWU = (
-    "<script>(function(){var b=document.getElementById('motyw');var c=false;"
-    "function ustaw(v){document.body.classList.toggle('ciemny',v);"
-    "b.textContent=v?'Jasny motyw':'Ciemny motyw';}"
-    "try{c=localStorage.getItem('motyw')==='ciemny';}catch(e){}ustaw(c);"
-    "b.addEventListener('click',function(){c=!c;try{localStorage.setItem('motyw',c?'ciemny':'jasny');}catch(e){}ustaw(c);});"
+    "<script>(function(){var b=document.getElementById('motyw');"
+    "var tryby=['jasny','ciemny','auto'];"
+    "var ikony={jasny:'\\u2600\\ufe0f',ciemny:'\\ud83c\\udf19',auto:'\\ud83d\\udcbb'};"
+    "var etykiety={jasny:'Jasny motyw',ciemny:'Ciemny motyw',auto:'Motyw systemowy'};"
+    "var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;"
+    "var t='auto';try{t=localStorage.getItem('motyw')||'auto';}catch(e){}"
+    "if(tryby.indexOf(t)<0){t='auto';}"
+    "function ciemny(){return t==='ciemny'||(t==='auto'&&mq&&mq.matches);}"
+    "function ustaw(){document.body.classList.toggle('ciemny',ciemny());"
+    "b.textContent=ikony[t];b.title=etykiety[t]+' (kliknij, aby zmienić)';}"
+    "ustaw();if(mq&&mq.addEventListener){mq.addEventListener('change',ustaw);}"
+    "b.addEventListener('click',function(){t=tryby[(tryby.indexOf(t)+1)%3];"
+    "try{localStorage.setItem('motyw',t);}catch(e){}ustaw();});"
     "})();</script>"
 )
 
@@ -266,7 +274,7 @@ def strona(tytul, tresc):
         "<!doctype html><html lang='pl'><head><meta charset='utf-8'>"
         f"<title>{html.escape(tytul)}</title><style>{STYL}</style></head><body>"
         f"<div class='gora'><h1>{html.escape(tytul)}</h1>"
-        "<button type='button' id='motyw' class='btn'>Ciemny motyw</button></div>"
+        "<button type='button' id='motyw' class='btn' style='font-size:16px'>\U0001f4bb</button></div>"
         f"{tresc}{SKRYPT_MOTYWU}</body></html>"
     )
 
