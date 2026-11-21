@@ -233,7 +233,7 @@ def _renko_obok(serie):
     if not rozmiar:
         return "<p class='uwaga'>Za mało danych, żeby pokazać Renko.</p>"
     cegly, _ = ka.renko(probki, rozmiar)
-    svg = _wykres_renko(cegly)
+    svg = _wykres_renko(cegly, poziomy=_poziomy_wykresu(serie))
     if not svg:
         return "<p class='uwaga'>Za mało ruchu, żeby pokazać Renko.</p>"
     return f"<div><p class='uwaga'>Renko (cegła {rozmiar:.4g})</p>{svg}</div>"
@@ -539,12 +539,16 @@ def _kalkulator(symbol, tech, parametry, punkty):
     return formularz + tabela + f"<p>{srednia_txt}</p>" + historia
 
 
-def _wykres_renko(cegly, ile=60):
+def _wykres_renko(cegly, ile=60, poziomy=None):
     pokaz = cegly[-ile:]
     if not pokaz:
         return ""
     lo = min(b[1] for b in pokaz)
     hi = max(b[2] for b in pokaz)
+    # poziomy wsparcia i oporu tylko w pobliżu zakresu cen cegieł
+    poziomy = [(p, t) for p, t in (poziomy or []) if lo * 0.85 <= p <= hi * 1.15]
+    lo = min([lo] + [p for p, _ in poziomy])
+    hi = max([hi] + [p for p, _ in poziomy])
     szer, wys, ml, mr, mt, mb = 900, 300, 70, 12, 12, 12
     pw, ph = szer - ml - mr, wys - mt - mb
     cw = pw / len(pokaz)
@@ -566,6 +570,13 @@ def _wykres_renko(cegly, ile=60):
         h = max(2.0, Y(dolna) - Y(gorna))
         elementy.append(f"<rect x='{ml + i * cw + 1:.1f}' y='{y:.1f}' width='{cw - 2:.1f}' height='{h:.1f}' "
                         f"style='fill:{kolor}'/>")
+    for p, typ in poziomy:
+        y = Y(p)
+        kolor = "var(--accent)" if typ == "wsparcie" else "var(--danger)"
+        elementy.append(f"<line x1='{ml}' y1='{y:.1f}' x2='{szer - mr}' y2='{y:.1f}' stroke-dasharray='6 4' "
+                        f"style='stroke:{kolor}'/>")
+        elementy.append(f"<text x='{szer - mr - 4}' y='{y - 3:.1f}' text-anchor='end' font-size='11' "
+                        f"style='fill:{kolor}'>{typ} {p:.4g}</text>")
     for c in (lo, (lo + hi) / 2, hi):
         elementy.append(f"<text x='{ml - 6}' y='{Y(c) + 4:.1f}' text-anchor='end' font-size='11'>{c:.4g}</text>")
     return (f"<svg data-zoom='1' viewBox='0 0 {szer} {wys}' width='100%' style='border:1px solid var(--line)'>"
