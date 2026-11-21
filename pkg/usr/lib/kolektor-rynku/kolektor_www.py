@@ -509,6 +509,44 @@ def _kalkulator(symbol, tech, parametry, punkty):
     return formularz + tabela + f"<p>{srednia_txt}</p>" + historia
 
 
+def _wykres_renko(cegly, ile=60):
+    pokaz = cegly[-ile:]
+    if not pokaz:
+        return ""
+    lo = min(b[1] for b in pokaz)
+    hi = max(b[2] for b in pokaz)
+    szer, wys, ml, mr, mt, mb = 900, 300, 70, 12, 12, 12
+    pw, ph = szer - ml - mr, wys - mt - mb
+    cw = pw / len(pokaz)
+
+    def Y(c):
+        return mt + (hi - c) / (hi - lo) * ph if hi > lo else mt + ph / 2
+
+    elementy = []
+    for i, (kierunek, dolna, gorna) in enumerate(pokaz):
+        kolor = "var(--accent)" if kierunek == "gora" else "var(--danger)"
+        y = Y(gorna)
+        h = max(2.0, Y(dolna) - Y(gorna))
+        elementy.append(f"<rect x='{ml + i * cw + 1:.1f}' y='{y:.1f}' width='{cw - 2:.1f}' height='{h:.1f}' "
+                        f"style='fill:{kolor}'/>")
+    for c in (lo, (lo + hi) / 2, hi):
+        elementy.append(f"<text x='{ml - 6}' y='{Y(c) + 4:.1f}' text-anchor='end' font-size='11'>{c:.4g}</text>")
+    return (f"<svg viewBox='0 0 {szer} {wys}' width='100%' style='max-width:{szer}px;border:1px solid var(--line)'>"
+            + "".join(elementy) + "</svg>")
+
+
+def _renko_html(punkty):
+    probki = [c for _, c in ka.probki_godzinowe(punkty)]
+    rozmiar = ka.rozmiar_cegly(probki)
+    if not rozmiar:
+        return "<p>Za mało danych z kolektora, żeby zbudować cegły Renko.</p>"
+    cegly, poziom = ka.renko(probki, rozmiar)
+    zdania = "".join(f"<li>{html.escape(z)}</li>" for z in ka.opis_renko(cegly, poziom, rozmiar))
+    return (_wykres_renko(cegly) + f"<ul>{zdania}</ul>"
+            + "<p class='uwaga'>Zielone cegły idą w górę, czerwone w dół. Renko pomija czas, "
+              "więc każda cegła to tylko zmiana ceny o pełny rozmiar.</p>")
+
+
 def strona_analizy(cfg, symbol, parametry=None):
     parametry = parametry or {}
     if symbol not in cfg["symbole"]:
@@ -606,6 +644,7 @@ def strona_analizy(cfg, symbol, parametry=None):
         f"<a href='/symbol?s={urllib.parse.quote(symbol)}'>wykres i odczyty</a></p>"
         f"<h2>{html.escape(symbol)} ({html.escape(zrodlo)}: {html.escape(ident)})</h2>"
         "<fieldset><legend>Wskaźniki techniczne (z kolektora)</legend>" + tech_html + "</fieldset>"
+        "<fieldset><legend>Wykres Renko</legend>" + _renko_html(punkty) + "</fieldset>"
         "<fieldset><legend>Wycena i dane rynkowe</legend>" + rynek_html + "</fieldset>"
         "<fieldset><legend>Nastroje</legend>" + nastroje_html + "</fieldset>"
         "<fieldset><legend>Wiadomości</legend>" + wiadomosci_html + "</fieldset>"

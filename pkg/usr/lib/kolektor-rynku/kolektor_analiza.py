@@ -199,3 +199,56 @@ def raport_wszystkie(symbol=None, teraz=None):
         return "Brak danych do analizy."
     bloki = [raport(s, serie[s]) for s in sorted(serie)]
     return "\n\n".join(bloki) + "\n\nTo opis danych, nie rekomendacja inwestycyjna."
+
+
+# --- wykres Renko (cegły o stałym rozmiarze, bez osi czasu) -------------------
+
+def rozmiar_cegly(ceny, okno=72):
+    """Rozmiar cegły: średnia bezwzględna zmiana między kolejnymi godzinami z ostatnich `okno` próbek."""
+    ost = ceny[-okno:]
+    if len(ost) < 2:
+        return None
+    zmiany = [abs(b - a) for a, b in zip(ost, ost[1:])]
+    srednia = sum(zmiany) / len(zmiany)
+    return srednia if srednia > 0 else None
+
+
+def renko(ceny, rozmiar):
+    """Cegły Renko: (lista cegieł, poziom bazowy po ostatniej cegle).
+
+    Cegła ("gora" albo "dol", dolna granica, górna granica) powstaje, gdy cena przekroczy
+    poprzedni poziom o pełny rozmiar. Czas nie wpływa na wynik.
+    """
+    if not rozmiar or len(ceny) < 2:
+        return [], ceny[-1] if ceny else None
+    cegly = []
+    poziom = ceny[0]
+    for c in ceny[1:]:
+        while c >= poziom + rozmiar:
+            cegly.append(("gora", poziom, poziom + rozmiar))
+            poziom += rozmiar
+        while c <= poziom - rozmiar:
+            cegly.append(("dol", poziom - rozmiar, poziom))
+            poziom -= rozmiar
+    return cegly, poziom
+
+
+def opis_renko(cegly, poziom, rozmiar, ile=20):
+    """Zdania opisujące cegły, bez wniosku o kupnie czy sprzedaży."""
+    if not cegly:
+        return ["Za mało ruchu, żeby zbudować cegły Renko."]
+    ost = cegly[-ile:]
+    w_gore = sum(1 for d, _, _ in ost if d == "gora")
+    w_dol = len(ost) - w_gore
+    zdania = [f"Rozmiar cegły wynosi {rozmiar:.4g}, czyli średnia zmiana godzinowa z ostatnich 72 h."]
+    zdania.append(f"Z ostatnich {len(ost)} cegieł {w_gore} idzie w górę, a {w_dol} w dół.")
+    seria, kierunek = 0, cegly[-1][0]
+    for d, _, _ in reversed(cegly):
+        if d != kierunek:
+            break
+        seria += 1
+    zdania.append(f"Ostatni ciąg to {seria} cegieł {'w górę' if kierunek == 'gora' else 'w dół'}.")
+    zdania.append(f"Kolejna cegła w górę pojawi się przy cenie {poziom + rozmiar:.4g}, "
+                  f"a w dół przy cenie {poziom - rozmiar:.4g}.")
+    return zdania
+
