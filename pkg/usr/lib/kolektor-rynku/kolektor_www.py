@@ -227,9 +227,9 @@ def _dzienne_podsumowanie(serie):
             f"<th>Najwyższy</th><th>o godz.</th></tr>{wiersze}</table>")
 
 
-def _renko_obok(serie):
+def _renko_obok(serie, cegla=None):
     probki = [c for _, c in ka.probki_godzinowe(serie)]
-    rozmiar = ka.rozmiar_cegly(probki)
+    rozmiar = cegla or ka.rozmiar_cegly(probki)
     if not rozmiar:
         return "<p class='uwaga'>Za mało danych, żeby pokazać Renko.</p>"
     cegly, _ = ka.renko(probki, rozmiar)
@@ -239,7 +239,28 @@ def _renko_obok(serie):
     return f"<div><p class='uwaga'>Renko (cegła {rozmiar:.4g})</p>{svg}</div>"
 
 
-def _wykres_panel(symbol, zakres):
+def _cel_dnia(serie, cel_proc):
+    """Opis ruchu dnia od pierwszego odczytu: ostatni kurs, największy ruch w górę i w dół, cel."""
+    dzis = datetime.now(timezone.utc).astimezone(kr.WARSZAWA).date()
+    dzien = [(t, c) for t, c, _ in serie if t.astimezone(kr.WARSZAWA).date() == dzis]
+    if len(dzien) < 2:
+        return "<p class='uwaga'>Za mało dzisiejszych odczytów, żeby policzyć ruch dnia.</p>"
+    otwarcie = dzien[0][1]
+    ostatni = dzien[-1][1]
+    gora = (max(c for _, c in dzien) / otwarcie - 1) * 100
+    dol = (min(c for _, c in dzien) / otwarcie - 1) * 100
+    zmiana = (ostatni / otwarcie - 1) * 100
+    osiagniety = "osiągnięty" if gora >= cel_proc else "nieosiągnięty"
+    return (
+        f"<p>Od pierwszego dzisiejszego odczytu ({otwarcie:.4g}) kurs wynosi {ostatni:.4g}, "
+        f"czyli {zmiana:+.2f}% ({ostatni - otwarcie:+.4g} pkt).</p>"
+        f"<p>Największy ruch w górę od otwarcia: {gora:+.2f}%. Cel dzienny {cel_proc:g}%: <b>{osiagniety}</b>.</p>"
+        f"<p>Największy ruch w dół od otwarcia: {dol:+.2f}%.</p>"
+        "<p class='uwaga'>Opis wyników w punktach i procentach, bez wskazania kupna ani sprzedaży.</p>"
+    )
+
+
+def _wykres_panel(symbol, zakres, cegla=None):
     serie = _seria(symbol, zakres)
     punkty = [(t, c) for t, c, _ in serie]
     przyciski = " ".join(
@@ -249,7 +270,7 @@ def _wykres_panel(symbol, zakres):
     return (
         f"<p>Zakres: {przyciski}</p>"
         + "<div class='obok'><div>" + wykres_interaktywny(punkty, poziomy=_poziomy_wykresu(serie))
-        + "</div>" + _renko_obok(serie) + "</div>"
+        + "</div>" + _renko_obok(serie, cegla) + "</div>"
         + "<p class='uwaga'>Najedź myszką na wykres, żeby zobaczyć kurs i czas (czas polski). "
         "Przerywane linie to wsparcia (zielone) i opory (czerwone).</p>"
     )
@@ -439,18 +460,35 @@ def strona_glowna(cfg, blad, info):
     return strona("Kolektor kursów", tresc)
 
 
-def strona_symbolu(cfg, symbol, zakres='1d'):
+def strona_symbolu(cfg, symbol, zakres='1d', parametry=None):
+    parametry = parametry or {}
+    cegla = _liczba_dodatnia(parametry.get('cegla', [''])[0])
+    cel = _liczba_dodatnia(parametry.get('cel', [''])[0]) or 1.0
     if symbol not in cfg["symbole"]:
         return strona("Nie ma takiego symbolu", "<p><a href='/'>Wróć</a></p>")
     tresc = (
         "<p><a href='/'>← wszystkie symbole</a> · "
         f"<a class='btn' href='/analiza?s={urllib.parse.quote(symbol)}'>Analiza</a></p>"
         f"<h2>{html.escape(symbol)} ({html.escape(cfg['symbole'][symbol][0])}: {html.escape(cfg['symbole'][symbol][1])})</h2>"
-        + _wykres_panel(symbol, zakres)
+        + f"<form method='get' action='/symbol'><input type='hidden' name='s' value='{html.escape(symbol, quote=True)}'>"
+        f"<input type='hidden' name='zakres' value='{html.escape(zakres, quote=True)}'>"
+        f"Rozmiar cegły Renko (pkt, puste = automatycznie): <input type='text' name='cegla' size='8' value='{html.escape(str(cegla or ''), quote=True)}'> "
+        f"Cel dzienny (%): <input type='text' name='cel' size='5' value='{html.escape(f'{cel:g}', quote=True)}'> "
+        "<button type='submit'>Przelicz</button></form>"
+        + _wykres_panel(symbol, zakres, cegla)
+        + "<h3>Cel dnia</h3>" + _cel_dnia(_seria(symbol, zakres), cel)
         + "<h3>Najniższy i najwyższy kurs w każdym dniu</h3>"
         + _dzienne_podsumowanie(_seria(symbol, zakres))
     )
     return strona(f"Symbol {symbol}", tresc)
+
+
+def _liczba_dodatnia(tekst):
+    try:
+        wartosc = float(str(tekst).replace(",", "."))
+    except ValueError:
+        return None
+    return wartosc if 0 < wartosc < 1e9 else None
 
 
 def _liczba(wartosc, przyrostek="", miejsca=2):
@@ -834,7 +872,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if url.path == "/":
             return self._html(200, strona_glowna(cfg, q.get("blad", [""])[0], q.get("info", [""])[0]))
         if url.path == "/symbol":
-            return self._html(200, strona_symbolu(cfg, q.get("s", [""])[0].upper(), q.get("zakres", ["1d"])[0]))
+            return self._html(200, strona_symbolu(cfg, q.get("s", [""])[0].upper(), q.get("zakres", ["1d"])[0], q))
         if url.path == "/analiza":
             return self._html(200, strona_analizy(cfg, q.get("s", [""])[0].upper(), q))
         if url.path == "/csv":
