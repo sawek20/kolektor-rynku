@@ -231,40 +231,49 @@ input[type=text],input[type=password],input[type=number]{padding:4px}
 .ostrzezenie{color:#b45309;font-weight:600}.neutralny{color:#374151}
 .wsparcie td{background:#dcfce7}.opor td{background:#fee2e2}
 .gora{display:flex;justify-content:space-between;align-items:center}.gora h1{margin:0}
-body.ciemny{background:#111827;color:#e5e7eb}
-body.ciemny td,body.ciemny th{border-color:#374151}
-body.ciemny th{background:#1f2937}
-body.ciemny input,body.ciemny select{background:#1f2937;color:#e5e7eb;border:1px solid #4b5563}
-body.ciemny fieldset{border-color:#374151}
-body.ciemny a{color:#93c5fd}
-body.ciemny .btn{color:#fff;background:#3b82f6}
-body.ciemny .uwaga{color:#9ca3af}
-body.ciemny .blad{background:#7f1d1d;color:#fecaca}
-body.ciemny .info{background:#14532d;color:#bbf7d0}
-body.ciemny .status-ok,body.ciemny .wzrost{color:#86efac}
-body.ciemny .status-zly,body.ciemny .spadek{color:#fca5a5}
-body.ciemny .ostrzezenie{color:#fbbf24}body.ciemny .neutralny{color:#d1d5db}
-body.ciemny .wsparcie td{background:#14532d}body.ciemny .opor td{background:#7f1d1d}
-body.ciemny svg{background:#1f2937 !important}
-body.ciemny svg text{fill:#e5e7eb}
-body.ciemny svg line[stroke='#e5e7eb']{stroke:#374151}
+.btn.icon{padding:7px 9px;line-height:0}
+.btn .sun{display:none}html.ciemny .btn .sun{display:inline}html.ciemny .btn .moon{display:none}
+html.ciemny{background:#111827;color:#e5e7eb}
+html.ciemny td,html.ciemny th{border-color:#374151}
+html.ciemny th{background:#1f2937}
+html.ciemny input,html.ciemny select{background:#1f2937;color:#e5e7eb;border:1px solid #4b5563}
+html.ciemny fieldset{border-color:#374151}
+html.ciemny a{color:#93c5fd}
+html.ciemny .btn{color:#fff;background:#3b82f6}
+html.ciemny .uwaga{color:#9ca3af}
+html.ciemny .blad{background:#7f1d1d;color:#fecaca}
+html.ciemny .info{background:#14532d;color:#bbf7d0}
+html.ciemny .status-ok,html.ciemny .wzrost{color:#86efac}
+html.ciemny .status-zly,html.ciemny .spadek{color:#fca5a5}
+html.ciemny .ostrzezenie{color:#fbbf24}html.ciemny .neutralny{color:#d1d5db}
+html.ciemny .wsparcie td{background:#14532d}html.ciemny .opor td{background:#7f1d1d}
+html.ciemny svg{background:#1f2937 !important}
+html.ciemny svg text{fill:#e5e7eb}
+html.ciemny svg line[stroke='#e5e7eb']{stroke:#374151}
 """
 
 
+KLUCZ_MOTYWU = "kolektor-rynku-motyw"
+
+SKRYPT_GLOWA = (
+    "<script>try{var s=localStorage.getItem('" + KLUCZ_MOTYWU + "');"
+    "if(s==='dark'||(!s&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches))"
+    "document.documentElement.classList.add('ciemny');}catch(e){}</script>"
+)
+
 SKRYPT_MOTYWU = (
     "<script>(function(){var b=document.getElementById('motyw');"
-    "var tryby=['jasny','ciemny','auto'];"
-    "var ikony={jasny:'\\u2600\\ufe0f',ciemny:'\\ud83c\\udf19',auto:'\\ud83d\\udcbb'};"
-    "var etykiety={jasny:'Jasny motyw',ciemny:'Ciemny motyw',auto:'Motyw systemowy'};"
-    "var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;"
-    "var t='auto';try{t=localStorage.getItem('motyw')||'auto';}catch(e){}"
-    "if(tryby.indexOf(t)<0){t='auto';}"
-    "function ciemny(){return t==='ciemny'||(t==='auto'&&mq&&mq.matches);}"
-    "function ustaw(){document.body.classList.toggle('ciemny',ciemny());"
-    "b.textContent=ikony[t];b.title=etykiety[t]+' (kliknij, aby zmienić)';}"
-    "ustaw();if(mq&&mq.addEventListener){mq.addEventListener('change',ustaw);}"
-    "b.addEventListener('click',function(){t=tryby[(tryby.indexOf(t)+1)%3];"
-    "try{localStorage.setItem('motyw',t);}catch(e){}ustaw();});"
+    "var mq=window.matchMedia?matchMedia('(prefers-color-scheme: dark)'):null;"
+    "function ciemny(){return document.documentElement.classList.contains('ciemny');}"
+    "function ustaw(){var t=ciemny()?'Zmień na jasny wygląd':'Zmień na ciemny wygląd';"
+    "b.setAttribute('aria-label',t);b.title=t;}"
+    "ustaw();"
+    "if(mq&&mq.addEventListener){mq.addEventListener('change',function(){"
+    "try{if(localStorage.getItem('" + KLUCZ_MOTYWU + "'))return;}catch(e){}"
+    "document.documentElement.classList.toggle('ciemny',mq.matches);ustaw();});}"
+    "b.addEventListener('click',function(){var d=!ciemny();"
+    "document.documentElement.classList.toggle('ciemny',d);"
+    "try{localStorage.setItem('" + KLUCZ_MOTYWU + "',d?'dark':'light');}catch(e){}ustaw();});"
     "})();</script>"
 )
 
@@ -272,9 +281,9 @@ SKRYPT_MOTYWU = (
 def strona(tytul, tresc):
     return (
         "<!doctype html><html lang='pl'><head><meta charset='utf-8'>"
-        f"<title>{html.escape(tytul)}</title><style>{STYL}</style></head><body>"
+        f"<title>{html.escape(tytul)}</title>{SKRYPT_GLOWA}<style>{STYL}</style></head><body>"
         f"<div class='gora'><h1>{html.escape(tytul)}</h1>"
-        "<button type='button' id='motyw' class='btn' style='font-size:16px'>\U0001f4bb</button></div>"
+        "<button type='button' id='motyw' class='btn icon' aria-label='Zmień na ciemny wygląd' title='Ciemny / jasny wygląd'>""<svg class='moon' viewBox='0 0 24 24' width='18' height='18' aria-hidden='true'><path fill='currentColor' d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'/></svg>""<svg class='sun' viewBox='0 0 24 24' width='18' height='18' aria-hidden='true'><circle cx='12' cy='12' r='4.5' fill='currentColor'/>""<g stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8'/></g></svg>""</button></div>"
         f"{tresc}{SKRYPT_MOTYWU}</body></html>"
     )
 
