@@ -230,14 +230,44 @@ input[type=text],input[type=password],input[type=number]{padding:4px}
 .wzrost{color:#166534;font-weight:600}.spadek{color:#991b1b;font-weight:600}
 .ostrzezenie{color:#b45309;font-weight:600}.neutralny{color:#374151}
 .wsparcie td{background:#dcfce7}.opor td{background:#fee2e2}
+.gora{display:flex;justify-content:space-between;align-items:center}.gora h1{margin:0}
+body.ciemny{background:#111827;color:#e5e7eb}
+body.ciemny td,body.ciemny th{border-color:#374151}
+body.ciemny th{background:#1f2937}
+body.ciemny input,body.ciemny select{background:#1f2937;color:#e5e7eb;border:1px solid #4b5563}
+body.ciemny fieldset{border-color:#374151}
+body.ciemny a{color:#93c5fd}
+body.ciemny .btn{color:#fff;background:#3b82f6}
+body.ciemny .uwaga{color:#9ca3af}
+body.ciemny .blad{background:#7f1d1d;color:#fecaca}
+body.ciemny .info{background:#14532d;color:#bbf7d0}
+body.ciemny .status-ok,body.ciemny .wzrost{color:#86efac}
+body.ciemny .status-zly,body.ciemny .spadek{color:#fca5a5}
+body.ciemny .ostrzezenie{color:#fbbf24}body.ciemny .neutralny{color:#d1d5db}
+body.ciemny .wsparcie td{background:#14532d}body.ciemny .opor td{background:#7f1d1d}
+body.ciemny svg{background:#1f2937 !important}
+body.ciemny svg text{fill:#e5e7eb}
+body.ciemny svg line[stroke='#e5e7eb']{stroke:#374151}
 """
+
+
+SKRYPT_MOTYWU = (
+    "<script>(function(){var b=document.getElementById('motyw');var c=false;"
+    "function ustaw(v){document.body.classList.toggle('ciemny',v);"
+    "b.textContent=v?'Jasny motyw':'Ciemny motyw';}"
+    "try{c=localStorage.getItem('motyw')==='ciemny';}catch(e){}ustaw(c);"
+    "b.addEventListener('click',function(){c=!c;try{localStorage.setItem('motyw',c?'ciemny':'jasny');}catch(e){}ustaw(c);});"
+    "})();</script>"
+)
 
 
 def strona(tytul, tresc):
     return (
         "<!doctype html><html lang='pl'><head><meta charset='utf-8'>"
         f"<title>{html.escape(tytul)}</title><style>{STYL}</style></head><body>"
-        f"<h1>{html.escape(tytul)}</h1>{tresc}</body></html>"
+        f"<div class='gora'><h1>{html.escape(tytul)}</h1>"
+        "<button type='button' id='motyw' class='btn'>Ciemny motyw</button></div>"
+        f"{tresc}{SKRYPT_MOTYWU}</body></html>"
     )
 
 
