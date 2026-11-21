@@ -139,6 +139,7 @@ def wykres_interaktywny(punkty, szer=900, wys=320, poziomy=None):
         siatka += f"<text x='{ml - 6}' y='{y + 4:.1f}' text-anchor='end' font-size='11'>{c:.4g}</text>"
     for k in range(6):
         i = round((n - 1) * k / 5)
+        siatka += f"<line x1='{X(i):.1f}' y1='{mt}' x2='{X(i):.1f}' y2='{wys - mb}' stroke='#e5e7eb'/>"
         siatka += (f"<text x='{X(i):.1f}' y='{wys - mb + 16}' text-anchor='middle' font-size='11'>"
                    f"{czas_txt(proby[i][0])}</text>")
     for p, typ in poziomy:
@@ -224,6 +225,18 @@ def _dzienne_podsumowanie(serie):
     return f"<ul class='dni'>{linie}</ul>"
 
 
+def _renko_obok(serie):
+    probki = [c for _, c in ka.probki_godzinowe(serie)]
+    rozmiar = ka.rozmiar_cegly(probki)
+    if not rozmiar:
+        return "<p class='uwaga'>Za mało danych, żeby pokazać Renko.</p>"
+    cegly, _ = ka.renko(probki, rozmiar)
+    svg = _wykres_renko(cegly)
+    if not svg:
+        return "<p class='uwaga'>Za mało ruchu, żeby pokazać Renko.</p>"
+    return f"<div><p class='uwaga'>Renko (cegła {rozmiar:.4g})</p>{svg}</div>"
+
+
 def _wykres_panel(symbol, zakres):
     serie = _seria(symbol, zakres)
     punkty = [(t, c) for t, c, _ in serie]
@@ -233,7 +246,8 @@ def _wykres_panel(symbol, zakres):
     )
     return (
         f"<p>Zakres: {przyciski}</p>"
-        + wykres_interaktywny(punkty, poziomy=_poziomy_wykresu(serie))
+        + "<div class='obok'><div>" + wykres_interaktywny(punkty, poziomy=_poziomy_wykresu(serie))
+        + "</div>" + _renko_obok(serie) + "</div>"
         + "<p class='uwaga'>Najedź myszką na wykres, żeby zobaczyć kurs i czas (czas polski). "
         "Przerywane linie to wsparcia (zielone) i opory (czerwone).</p>"
     )
@@ -283,6 +297,7 @@ input[type=text],input[type=password],input[type=number],select{padding:4px;back
 h1{font-size:30px;font-weight:700;margin:0}
 #motyw{position:fixed;top:16px;right:20px;z-index:10}
 .btn .sun{display:none}html.ciemny .btn .sun{display:inline}html.ciemny .btn .moon{display:none}
+.obok{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}.obok>div{flex:1 1 420px;min-width:0}
 #wykres{background:var(--sunk)!important}
 .btn svg{background:transparent}
 svg text{fill:var(--muted)}
@@ -523,6 +538,13 @@ def _wykres_renko(cegly, ile=60):
         return mt + (hi - c) / (hi - lo) * ph if hi > lo else mt + ph / 2
 
     elementy = []
+    for k in range(5):
+        c = lo + (hi - lo) * k / 4
+        elementy.append(f"<line x1='{ml}' y1='{Y(c):.1f}' x2='{szer - mr}' y2='{Y(c):.1f}' stroke='#e5e7eb'/>")
+    krok = max(1, len(pokaz) // 6)
+    for i in range(0, len(pokaz) + 1, krok):
+        x = ml + i * cw
+        elementy.append(f"<line x1='{x:.1f}' y1='{mt}' x2='{x:.1f}' y2='{mt + ph}' stroke='#e5e7eb'/>")
     for i, (kierunek, dolna, gorna) in enumerate(pokaz):
         kolor = "var(--accent)" if kierunek == "gora" else "var(--danger)"
         y = Y(gorna)
