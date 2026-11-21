@@ -238,7 +238,8 @@ input[type=text],input[type=password],input[type=number],select{padding:4px;back
 h1{font-size:30px;font-weight:700;margin:0}
 #motyw{position:fixed;top:16px;right:20px;z-index:10}
 .btn .sun{display:none}html.ciemny .btn .sun{display:inline}html.ciemny .btn .moon{display:none}
-svg{background:var(--surface)!important}
+#wykres{background:var(--sunk)!important}
+.btn svg{background:transparent}
 svg text{fill:var(--muted)}
 svg line[stroke='#e5e7eb']{stroke:var(--line)}
 svg polyline{stroke:var(--res-ink)!important}
