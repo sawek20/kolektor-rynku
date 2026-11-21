@@ -97,7 +97,7 @@ def ostatnie_odczyty(symbole, ile):
     return {s: list(b) for s, b in bufory.items()}
 
 
-def wykres_interaktywny(punkty, szer=900, wys=320):
+def wykres_interaktywny(punkty, szer=900, wys=320, poziomy=None):
     """Wykres z osią czasu i ceny oraz podglądem kursu i czasu po najechaniu myszką.
 
     punkty: [(czas_utc, cena)] posortowane. Próbki są przerzedzane do ok. 800 punktów.
@@ -110,6 +110,10 @@ def wykres_interaktywny(punkty, szer=900, wys=320):
         proby.append(punkty[-1])
     ceny = [c for _, c in proby]
     mn, mx = min(ceny), max(ceny)
+    # poziomy wsparcia i oporu tylko w pobliżu zakresu cen, żeby nie ściskać wykresu
+    poziomy = [(p, t) for p, t in (poziomy or []) if mn * 0.85 <= p <= mx * 1.15]
+    mn = min([mn] + [p for p, _ in poziomy])
+    mx = max([mx] + [p for p, _ in poziomy])
     rozp = (mx - mn) or (abs(mx) * 0.01) or 1.0
     lo, hi = mn - rozp * 0.05, mx + rozp * 0.05
     ml, mr, mt, mb = 70, 12, 12, 42
@@ -137,6 +141,13 @@ def wykres_interaktywny(punkty, szer=900, wys=320):
         i = round((n - 1) * k / 5)
         siatka += (f"<text x='{X(i):.1f}' y='{wys - mb + 16}' text-anchor='middle' font-size='11'>"
                    f"{czas_txt(proby[i][0])}</text>")
+    for p, typ in poziomy:
+        y = Y(p)
+        kolor = "var(--accent)" if typ == "wsparcie" else "var(--danger)"
+        siatka += (f"<line x1='{ml}' y1='{y:.1f}' x2='{szer - mr}' y2='{y:.1f}' stroke-dasharray='6 4' "
+                   f"style='stroke:{kolor}'/>")
+        siatka += (f"<text x='{szer - mr - 4}' y='{y - 3:.1f}' text-anchor='end' font-size='11' "
+                   f"style='fill:{kolor}'>{typ} {p:.4g}</text>")
     dane_json = json.dumps(dane).replace("</", "<\\/")
     return f"""<div><svg id='wykres' viewBox='0 0 {szer} {wys}' width='100%' style='max-width:{szer}px;background:#fafafa;border:1px solid #ddd'>
 {siatka}
@@ -179,18 +190,52 @@ def wykres_interaktywny(punkty, szer=900, wys=320):
 </script>"""
 
 
-def _wykres_panel(symbol, zakres):
+def _seria(symbol, zakres):
     dni = {"1d": 1, "7d": 7, "30d": 30}.get(zakres, 1)
     teraz = datetime.now(timezone.utc)
-    serie = kr.wczytaj_serie(teraz - timedelta(days=dni), teraz).get(symbol, [])
+    return kr.wczytaj_serie(teraz - timedelta(days=dni), teraz).get(symbol, [])
+
+
+def _poziomy_wykresu(serie):
+    tech = ko.wskazniki_techniczne(serie)
+    if not tech:
+        return []
+    return ([(p, "wsparcie") for p, _ in tech["wsparcia"][:3]]
+            + [(p, "opor") for p, _ in tech["opory"][:3]])
+
+
+def _dzienne_podsumowanie(serie):
+    """Jedna linia na dzień: najniższy i najwyższy kurs (czas polski)."""
+    dni = {}
+    for t, c, _ in serie:
+        lokalny = t.astimezone(kr.WARSZAWA)
+        d = dni.setdefault(lokalny.date(), {"min": (c, lokalny), "maks": (c, lokalny)})
+        if c < d["min"][0]:
+            d["min"] = (c, lokalny)
+        if c > d["maks"][0]:
+            d["maks"] = (c, lokalny)
+    if not dni:
+        return "<p>Brak danych w tym zakresie.</p>"
+    linie = "".join(
+        f"<li>{dzien:%d.%m}: najniższy {d['min'][0]:.4g} o {d['min'][1]:%H:%M}, "
+        f"najwyższy {d['maks'][0]:.4g} o {d['maks'][1]:%H:%M}</li>"
+        for dzien, d in sorted(dni.items())
+    )
+    return f"<ul class='dni'>{linie}</ul>"
+
+
+def _wykres_panel(symbol, zakres):
+    serie = _seria(symbol, zakres)
+    punkty = [(t, c) for t, c, _ in serie]
     przyciski = " ".join(
         f"<a class='btn{' ' if z == zakres else ''}' href='/symbol?s={urllib.parse.quote(symbol)}&zakres={z}'>{e}</a>"
         for z, e in (("1d", "1 dzień"), ("7d", "7 dni"), ("30d", "30 dni"))
     )
     return (
         f"<p>Zakres: {przyciski}</p>"
-        + wykres_interaktywny([(t, c) for t, c, _ in serie])
-        + "<p class='uwaga'>Najedź myszką na wykres, żeby zobaczyć kurs i czas (czas polski).</p>"
+        + wykres_interaktywny(punkty, poziomy=_poziomy_wykresu(serie))
+        + "<p class='uwaga'>Najedź myszką na wykres, żeby zobaczyć kurs i czas (czas polski). "
+        "Przerywane linie to wsparcia (zielone) i opory (czerwone).</p>"
     )
 
 
@@ -367,21 +412,13 @@ def strona_glowna(cfg, blad, info):
 def strona_symbolu(cfg, symbol, zakres='1d'):
     if symbol not in cfg["symbole"]:
         return strona("Nie ma takiego symbolu", "<p><a href='/'>Wróć</a></p>")
-    odczyty = ostatnie_odczyty({symbol: None}, 300)[symbol]
-    ceny = [float(c) for _, c, _, st in odczyty if st == "ok" and c]
-    wiersze = "".join(
-        f"<tr><td>{html.escape(ts)}</td><td>{html.escape(c or '-')}</td><td>{html.escape(w)}</td><td>{html.escape(st)}</td></tr>"
-        for ts, c, w, st in reversed(odczyty)
-    )
     tresc = (
         "<p><a href='/'>← wszystkie symbole</a> · "
         f"<a class='btn' href='/analiza?s={urllib.parse.quote(symbol)}'>Analiza</a></p>"
         f"<h2>{html.escape(symbol)} ({html.escape(cfg['symbole'][symbol][0])}: {html.escape(cfg['symbole'][symbol][1])})</h2>"
-        f"<p>Ostatnie {len(odczyty)} odczytów (z dwóch dni).</p>"
         + _wykres_panel(symbol, zakres)
-        + "<table><tr><th>Czas (UTC)</th><th>Cena</th><th>Waluta</th><th>Status</th></tr>"
-        + wiersze
-        + "</table>"
+        + "<h3>Najniższy i najwyższy kurs w każdym dniu</h3>"
+        + _dzienne_podsumowanie(_seria(symbol, zakres))
     )
     return strona(f"Symbol {symbol}", tresc)
 
