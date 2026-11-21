@@ -277,7 +277,7 @@ def wykres_svg(ceny, szer=640, wys=160):
 STYL = """
 :root{--bg:#f2f5f3;--surface:#ffffff;--sunk:#e7ece9;--line:#d3dbd7;--ink:#18241f;--muted:#5b6a64;--accent:#1f5e55;--accent-ink:#ffffff;--free:#fff1bf;--free-ink:#7a5a00;--band:#e9f0fa;--line-strong:#9fb4d4;--res:#dde8f7;--res-ink:#2b5c9e;--due:#fdf0d8;--due-ink:#9a5f0c;--danger:#a33a3a;--danger-bg:#f6e0e0}
 html.ciemny{--bg:#111816;--surface:#18221f;--sunk:#0d1311;--line:#2b3834;--ink:#e4ece8;--muted:#93a39c;--accent:#5fb3a3;--accent-ink:#0d1311;--free:#3a3219;--free-ink:#e8c766;--res:#1d2d45;--res-ink:#8db4ec;--band:#1b2733;--line-strong:#3f5670;--due:#3a2f1a;--due-ink:#e3b25a;--danger:#ec8f8f;--danger-bg:#3f2222;color-scheme:dark}
-body{font-family:system-ui,sans-serif;margin:24px;color:var(--ink);background:var(--bg);max-width:960px}
+body{font-family:system-ui,sans-serif;margin:24px;color:var(--ink);background:var(--bg);max-width:1280px}
 table{border-collapse:collapse;margin:12px 0}
 td,th{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:middle}
 th{background:var(--sunk)}
