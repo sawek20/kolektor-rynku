@@ -214,42 +214,34 @@ def wykres_svg(ceny, szer=640, wys=160):
 # --- strony -----------------------------------------------------------------
 
 STYL = """
-body{font-family:system-ui,sans-serif;margin:24px;color:#222;max-width:960px}
+:root{--bg:#f2f5f3;--surface:#ffffff;--sunk:#e7ece9;--line:#d3dbd7;--ink:#18241f;--muted:#5b6a64;--accent:#1f5e55;--accent-ink:#ffffff;--free:#fff1bf;--free-ink:#7a5a00;--band:#e9f0fa;--line-strong:#9fb4d4;--res:#dde8f7;--res-ink:#2b5c9e;--due:#fdf0d8;--due-ink:#9a5f0c;--danger:#a33a3a;--danger-bg:#f6e0e0}
+html.ciemny{--bg:#111816;--surface:#18221f;--sunk:#0d1311;--line:#2b3834;--ink:#e4ece8;--muted:#93a39c;--accent:#5fb3a3;--accent-ink:#0d1311;--free:#3a3219;--free-ink:#e8c766;--res:#1d2d45;--res-ink:#8db4ec;--band:#1b2733;--line-strong:#3f5670;--due:#3a2f1a;--due-ink:#e3b25a;--danger:#ec8f8f;--danger-bg:#3f2222;color-scheme:dark}
+body{font-family:system-ui,sans-serif;margin:24px;color:var(--ink);background:var(--bg);max-width:960px}
 table{border-collapse:collapse;margin:12px 0}
-td,th{border:1px solid #ddd;padding:6px 10px;text-align:left;vertical-align:middle}
-th{background:#f3f4f6}
+td,th{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:middle}
+th{background:var(--sunk)}
+a{color:var(--res-ink)}
 form.inline{display:inline}
-fieldset{margin:16px 0;padding:12px 16px;border:1px solid #ddd}
+fieldset{margin:16px 0;padding:12px 16px;border:1px solid var(--line)}
 legend{font-weight:600}
-input[type=text],input[type=password],input[type=number]{padding:4px}
-.blad{background:#fee2e2;color:#991b1b;padding:8px 12px;margin:8px 0}
-.info{background:#dcfce7;color:#166534;padding:8px 12px;margin:8px 0}
-.status-ok{color:#166534}.status-zly{color:#991b1b}
-.btn{display:inline-block;padding:3px 10px;background:#2563eb;color:#fff;text-decoration:none;border-radius:4px;font-size:13px}
-.uwaga{color:#6b7280;font-size:13px}
-.wzrost{color:#166534;font-weight:600}.spadek{color:#991b1b;font-weight:600}
-.ostrzezenie{color:#b45309;font-weight:600}.neutralny{color:#374151}
-.wsparcie td{background:#dcfce7}.opor td{background:#fee2e2}
-.gora{display:flex;justify-content:space-between;align-items:center}.gora h1{margin:0}
+input[type=text],input[type=password],input[type=number],select{padding:4px;background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:4px}
+.blad{background:var(--danger-bg);color:var(--danger);padding:8px 12px;margin:8px 0}
+.info{background:var(--band);color:var(--res-ink);padding:8px 12px;margin:8px 0}
+.status-ok{color:var(--accent)}.status-zly{color:var(--danger)}
+.btn{display:inline-block;padding:3px 10px;background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);text-decoration:none;border-radius:8px;font-size:13px;font-weight:600}
+.btn:hover{filter:brightness(1.08)}
 .btn.icon{padding:7px 9px;line-height:0}
+.uwaga{color:var(--muted);font-size:13px}
+.wzrost{color:var(--accent);font-weight:600}.spadek{color:var(--danger);font-weight:600}
+.ostrzezenie{color:var(--due-ink);font-weight:600}.neutralny{color:var(--muted)}
+.wsparcie td{background:var(--band)}.opor td{background:var(--danger-bg)}
+h1{font-size:30px;font-weight:700;margin:0}
+#motyw{position:fixed;top:16px;right:20px;z-index:10}
 .btn .sun{display:none}html.ciemny .btn .sun{display:inline}html.ciemny .btn .moon{display:none}
-html.ciemny{background:#111827;color:#e5e7eb}
-html.ciemny td,html.ciemny th{border-color:#374151}
-html.ciemny th{background:#1f2937}
-html.ciemny input,html.ciemny select{background:#1f2937;color:#e5e7eb;border:1px solid #4b5563}
-html.ciemny fieldset{border-color:#374151}
-html.ciemny a{color:#93c5fd}
-html.ciemny .btn{color:#fff;background:#3b82f6}
-html.ciemny .uwaga{color:#9ca3af}
-html.ciemny .blad{background:#7f1d1d;color:#fecaca}
-html.ciemny .info{background:#14532d;color:#bbf7d0}
-html.ciemny .status-ok,html.ciemny .wzrost{color:#86efac}
-html.ciemny .status-zly,html.ciemny .spadek{color:#fca5a5}
-html.ciemny .ostrzezenie{color:#fbbf24}html.ciemny .neutralny{color:#d1d5db}
-html.ciemny .wsparcie td{background:#14532d}html.ciemny .opor td{background:#7f1d1d}
-html.ciemny svg{background:#1f2937 !important}
-html.ciemny svg text{fill:#e5e7eb}
-html.ciemny svg line[stroke='#e5e7eb']{stroke:#374151}
+svg{background:var(--surface)!important}
+svg text{fill:var(--muted)}
+svg line[stroke='#e5e7eb']{stroke:var(--line)}
+svg polyline{stroke:var(--res-ink)!important}
 """
 
 
