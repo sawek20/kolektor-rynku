@@ -116,12 +116,19 @@ def zrob_wykres(dni, sciezka):
         ys = [c for _, c, _ in punkty]
         waluta = punkty[-1][2]
         ax.plot(xs, ys, color="#2563eb", linewidth=1.1)
+        for i_, kolor in ((ys.index(min(ys)), "#dc2626"), (ys.index(max(ys)), "#16a34a")):
+            ax.scatter([xs[i_]], [ys[i_]], color=kolor, s=18, zorder=3)
+            ax.annotate(f"{ys[i_]:.4g}\n{xs[i_]:%d.%m %H:%M}", (xs[i_], ys[i_]), textcoords="offset points",
+                        xytext=(4, 6), fontsize=7, color=kolor)
+        ax.set_ylabel(waluta, fontsize=8)
         zmiana = (ys[-1] - ys[0]) / ys[0] * 100 if ys[0] else 0.0
         strzalka = "▲" if zmiana > 0 else ("▼" if zmiana < 0 else "■")
         ax.set_title(f"{symbol}: {ys[-1]:,.4g} {waluta}  {strzalka} {zmiana:+.1f}%", fontsize=10)
         ax.grid(alpha=0.3)
         ax.tick_params(labelsize=8)
-        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m", tz=WARSZAWA))
+        ax.xaxis.set_major_locator(mdates.AutoDateLocator(tz=WARSZAWA))
+        ax.xaxis.set_major_formatter(mdates.DateFormatter("%d.%m %H:%M", tz=WARSZAWA))
+        ax.tick_params(axis="x", labelrotation=25)
     for ax in osie.flat[n:]:
         ax.set_visible(False)
     fig.suptitle(f"Kursy – ostatnie {dni} dni (czas PL)", fontsize=11)

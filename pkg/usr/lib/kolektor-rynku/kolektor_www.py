@@ -13,6 +13,7 @@ import hashlib
 import hmac
 import html
 import http.server
+import json
 import os
 import re
 import secrets
@@ -94,6 +95,103 @@ def ostatnie_odczyty(symbole, ile):
         except OSError:
             continue
     return {s: list(b) for s, b in bufory.items()}
+
+
+def wykres_interaktywny(punkty, szer=900, wys=320):
+    """Wykres z osią czasu i ceny oraz podglądem kursu i czasu po najechaniu myszką.
+
+    punkty: [(czas_utc, cena)] posortowane. Próbki są przerzedzane do ok. 800 punktów.
+    """
+    if len(punkty) < 2:
+        return "<p>Za mało punktów do wykresu.</p>"
+    krok = max(1, len(punkty) // 800)
+    proby = list(punkty[::krok])
+    if proby[-1] != punkty[-1]:
+        proby.append(punkty[-1])
+    ceny = [c for _, c in proby]
+    mn, mx = min(ceny), max(ceny)
+    rozp = (mx - mn) or (abs(mx) * 0.01) or 1.0
+    lo, hi = mn - rozp * 0.05, mx + rozp * 0.05
+    ml, mr, mt, mb = 70, 12, 12, 42
+    pw, ph = szer - ml - mr, wys - mt - mb
+    n = len(proby)
+
+    def X(i):
+        return ml + i * pw / (n - 1)
+
+    def Y(c):
+        return mt + (hi - c) / (hi - lo) * ph
+
+    def czas_txt(t):
+        return t.astimezone(kr.WARSZAWA).strftime("%d.%m %H:%M")
+
+    dane = [[round(X(i), 1), round(Y(c), 1), c, czas_txt(t)] for i, (t, c) in enumerate(proby)]
+    linia = " ".join(f"{d[0]},{d[1]}" for d in dane)
+    siatka = ""
+    for k in range(5):
+        c = lo + (hi - lo) * k / 4
+        y = Y(c)
+        siatka += f"<line x1='{ml}' y1='{y:.1f}' x2='{szer - mr}' y2='{y:.1f}' stroke='#e5e7eb'/>"
+        siatka += f"<text x='{ml - 6}' y='{y + 4:.1f}' text-anchor='end' font-size='11'>{c:.4g}</text>"
+    for k in range(6):
+        i = round((n - 1) * k / 5)
+        siatka += (f"<text x='{X(i):.1f}' y='{wys - mb + 16}' text-anchor='middle' font-size='11'>"
+                   f"{czas_txt(proby[i][0])}</text>")
+    dane_json = json.dumps(dane).replace("</", "<\\/")
+    return f"""<div><svg id='wykres' viewBox='0 0 {szer} {wys}' width='100%' style='max-width:{szer}px;background:#fafafa;border:1px solid #ddd'>
+{siatka}
+<polyline fill='none' stroke='#2563eb' stroke-width='1.5' points='{linia}'/>
+<line id='kursor' x1='0' x2='0' y1='{mt}' y2='{wys - mb}' stroke='#9ca3af' stroke-dasharray='3 3' visibility='hidden'/>
+<circle id='kropka' r='4' fill='#2563eb' visibility='hidden'/>
+<text id='opis' font-size='12' fill='#111' visibility='hidden'></text>
+</svg></div>
+<script>
+(function(){{
+  var dane = {dane_json};
+  var svg = document.getElementById('wykres');
+  var kursor = document.getElementById('kursor');
+  var kropka = document.getElementById('kropka');
+  var opis = document.getElementById('opis');
+  svg.addEventListener('mousemove', function(e){{
+    var r = svg.getBoundingClientRect();
+    var px = (e.clientX - r.left) * ({szer} / r.width);
+    var najblizszy = 0, roznica = Infinity;
+    for (var i = 0; i < dane.length; i++) {{
+      var d = Math.abs(dane[i][0] - px);
+      if (d < roznica) {{ roznica = d; najblizszy = i; }}
+    }}
+    var p = dane[najblizszy];
+    kursor.setAttribute('x1', p[0]); kursor.setAttribute('x2', p[0]); kursor.setAttribute('visibility', 'visible');
+    kropka.setAttribute('cx', p[0]); kropka.setAttribute('cy', p[1]); kropka.setAttribute('visibility', 'visible');
+    opis.textContent = p[3] + '   ' + p[2].toPrecision(6);
+    var lewo = p[0] > {szer} / 2;
+    opis.setAttribute('x', lewo ? p[0] - 8 : p[0] + 8);
+    opis.setAttribute('text-anchor', lewo ? 'end' : 'start');
+    opis.setAttribute('y', p[1] > {wys} / 2 ? p[1] - 10 : p[1] + 20);
+    opis.setAttribute('visibility', 'visible');
+  }});
+  svg.addEventListener('mouseleave', function(){{
+    kursor.setAttribute('visibility', 'hidden');
+    kropka.setAttribute('visibility', 'hidden');
+    opis.setAttribute('visibility', 'hidden');
+  }});
+}})();
+</script>"""
+
+
+def _wykres_panel(symbol, zakres):
+    dni = {"1d": 1, "7d": 7, "30d": 30}.get(zakres, 1)
+    teraz = datetime.now(timezone.utc)
+    serie = kr.wczytaj_serie(teraz - timedelta(days=dni), teraz).get(symbol, [])
+    przyciski = " ".join(
+        f"<a class='btn{' ' if z == zakres else ''}' href='/symbol?s={urllib.parse.quote(symbol)}&zakres={z}'>{e}</a>"
+        for z, e in (("1d", "1 dzień"), ("7d", "7 dni"), ("30d", "30 dni"))
+    )
+    return (
+        f"<p>Zakres: {przyciski}</p>"
+        + wykres_interaktywny([(t, c) for t, c, _ in serie])
+        + "<p class='uwaga'>Najedź myszką na wykres, żeby zobaczyć kurs i czas (czas polski).</p>"
+    )
 
 
 def wykres_svg(ceny, szer=640, wys=160):
@@ -226,7 +324,7 @@ def strona_glowna(cfg, blad, info):
     return strona("Kolektor kursów", tresc)
 
 
-def strona_symbolu(cfg, symbol):
+def strona_symbolu(cfg, symbol, zakres='1d'):
     if symbol not in cfg["symbole"]:
         return strona("Nie ma takiego symbolu", "<p><a href='/'>Wróć</a></p>")
     odczyty = ostatnie_odczyty({symbol: None}, 300)[symbol]
@@ -240,7 +338,7 @@ def strona_symbolu(cfg, symbol):
         f"<a class='btn' href='/analiza?s={urllib.parse.quote(symbol)}'>Analiza</a></p>"
         f"<h2>{html.escape(symbol)} ({html.escape(cfg['symbole'][symbol][0])}: {html.escape(cfg['symbole'][symbol][1])})</h2>"
         f"<p>Ostatnie {len(odczyty)} odczytów (z dwóch dni).</p>"
-        + wykres_svg(ceny)
+        + _wykres_panel(symbol, zakres)
         + "<table><tr><th>Czas (UTC)</th><th>Cena</th><th>Waluta</th><th>Status</th></tr>"
         + wiersze
         + "</table>"
@@ -572,7 +670,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if url.path == "/":
             return self._html(200, strona_glowna(cfg, q.get("blad", [""])[0], q.get("info", [""])[0]))
         if url.path == "/symbol":
-            return self._html(200, strona_symbolu(cfg, q.get("s", [""])[0].upper()))
+            return self._html(200, strona_symbolu(cfg, q.get("s", [""])[0].upper(), q.get("zakres", ["1d"])[0]))
         if url.path == "/analiza":
             return self._html(200, strona_analizy(cfg, q.get("s", [""])[0].upper(), q))
         if url.path == "/csv":
