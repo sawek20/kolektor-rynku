@@ -150,7 +150,7 @@ def wykres_interaktywny(punkty, szer=900, wys=320, poziomy=None):
         siatka += (f"<text x='{szer - mr - 4}' y='{y - 3:.1f}' text-anchor='end' font-size='11' "
                    f"style='fill:{kolor}'>{typ} {p:.4g}</text>")
     dane_json = json.dumps(dane).replace("</", "<\\/")
-    return f"""<div><svg id='wykres' viewBox='0 0 {szer} {wys}' width='100%' style='max-width:{szer}px;background:#fafafa;border:1px solid #ddd'>
+    return f"""<div><svg id='wykres' data-zoom='1' viewBox='0 0 {szer} {wys}' width='100%' style='background:#fafafa;border:1px solid #ddd'>
 {siatka}
 <polyline fill='none' stroke='#2563eb' stroke-width='1.5' points='{linia}'/>
 <line id='kursor' x1='0' x2='0' y1='{mt}' y2='{wys - mb}' stroke='#9ca3af' stroke-dasharray='3 3' visibility='hidden'/>
@@ -166,7 +166,7 @@ def wykres_interaktywny(punkty, szer=900, wys=320, poziomy=None):
   var opis = document.getElementById('opis');
   svg.addEventListener('mousemove', function(e){{
     var r = svg.getBoundingClientRect();
-    var px = (e.clientX - r.left) * ({szer} / r.width);
+    var px = svg.__x ? svg.__x(e.clientX) : (e.clientX - r.left) * ({szer} / r.width);
     var najblizszy = 0, roznica = Infinity;
     for (var i = 0; i < dane.length; i++) {{
       var d = Math.abs(dane[i][0] - px);
@@ -297,7 +297,7 @@ input[type=text],input[type=password],input[type=number],select{padding:4px;back
 h1{font-size:30px;font-weight:700;margin:0}
 #motyw{position:fixed;top:16px;right:20px;z-index:10}
 .btn .sun{display:none}html.ciemny .btn .sun{display:inline}html.ciemny .btn .moon{display:none}
-.obok{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}.obok>div{flex:1 1 420px;min-width:0}
+.obok>div{margin:0 0 16px}
 #wykres{background:var(--sunk)!important}
 .btn svg{background:transparent}
 svg text{fill:var(--muted)}
@@ -312,6 +312,19 @@ SKRYPT_GLOWA = (
     "<script>try{var s=localStorage.getItem('" + KLUCZ_MOTYWU + "');"
     "if(s==='dark'||(!s&&window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches))"
     "document.documentElement.classList.add('ciemny');}catch(e){}</script>"
+)
+
+SKRYPT_ZOOM = (
+    "<script>(function(){document.querySelectorAll('svg[data-zoom]').forEach(function(svg){"
+    "var b=svg.viewBox.baseVal;var W=b.width,H=b.height,vx=0,vw=W;"
+    "function ustaw(){svg.setAttribute('viewBox',vx+' 0 '+vw+' '+H);}"
+    "svg.__x=function(cx){var r=svg.getBoundingClientRect();return vx+(cx-r.left)*(vw/r.width);};"
+    "svg.addEventListener('wheel',function(e){e.preventDefault();var r=svg.getBoundingClientRect();"
+    "var f=(e.clientX-r.left)/r.width;var srodek=vx+f*vw;"
+    "var nw=e.deltaY<0?vw/1.25:vw*1.25;nw=Math.min(W,Math.max(W/40,nw));"
+    "vx=Math.max(0,Math.min(W-nw,srodek-f*nw));vw=nw;ustaw();},{passive:false});"
+    "svg.addEventListener('dblclick',function(){vx=0;vw=W;ustaw();});"
+    "});})();</script>"
 )
 
 SKRYPT_MOTYWU = (
@@ -337,7 +350,7 @@ def strona(tytul, tresc):
         f"<title>{html.escape(tytul)}</title>{SKRYPT_GLOWA}<style>{STYL}</style></head><body>"
         f"<div class='gora'><h1>{html.escape(tytul)}</h1>"
         "<button type='button' id='motyw' class='btn icon' aria-label='Zmień na ciemny wygląd' title='Ciemny / jasny wygląd'>""<svg class='moon' viewBox='0 0 24 24' width='18' height='18' aria-hidden='true'><path fill='currentColor' d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z'/></svg>""<svg class='sun' viewBox='0 0 24 24' width='18' height='18' aria-hidden='true'><circle cx='12' cy='12' r='4.5' fill='currentColor'/>""<g stroke='currentColor' stroke-width='2' stroke-linecap='round'><path d='M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8'/></g></svg>""</button></div>"
-        f"{tresc}{SKRYPT_MOTYWU}</body></html>"
+        f"{tresc}{SKRYPT_ZOOM}{SKRYPT_MOTYWU}</body></html>"
     )
 
 
@@ -553,7 +566,7 @@ def _wykres_renko(cegly, ile=60):
                         f"style='fill:{kolor}'/>")
     for c in (lo, (lo + hi) / 2, hi):
         elementy.append(f"<text x='{ml - 6}' y='{Y(c) + 4:.1f}' text-anchor='end' font-size='11'>{c:.4g}</text>")
-    return (f"<svg viewBox='0 0 {szer} {wys}' width='100%' style='max-width:{szer}px;border:1px solid var(--line)'>"
+    return (f"<svg data-zoom='1' viewBox='0 0 {szer} {wys}' width='100%' style='border:1px solid var(--line)'>"
             + "".join(elementy) + "</svg>")
 
 
