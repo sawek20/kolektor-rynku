@@ -206,7 +206,7 @@ def _poziomy_wykresu(serie):
 
 
 def _dzienne_podsumowanie(serie):
-    """Jedna linia na dzień: najniższy i najwyższy kurs (czas polski)."""
+    """Tabela: jeden wiersz na dzień, najniższy i najwyższy kurs (czas polski)."""
     dni = {}
     for t, c, _ in serie:
         lokalny = t.astimezone(kr.WARSZAWA)
@@ -217,24 +217,14 @@ def _dzienne_podsumowanie(serie):
             d["maks"] = (c, lokalny)
     if not dni:
         return "<p>Brak danych w tym zakresie.</p>"
-    linie = "".join(
-        f"<li>{dzien:%d.%m}: najniższy {d['min'][0]:.4g} o {d['min'][1]:%H:%M}, "
-        f"najwyższy {d['maks'][0]:.4g} o {d['maks'][1]:%H:%M}</li>"
+    wiersze = "".join(
+        f"<tr><td><b>{dzien:%d.%m}</b></td>"
+        f"<td class='spadek'><b>{d['min'][0]:.4g}</b></td><td>{d['min'][1]:%H:%M}</td>"
+        f"<td class='wzrost'><b>{d['maks'][0]:.4g}</b></td><td>{d['maks'][1]:%H:%M}</td></tr>"
         for dzien, d in sorted(dni.items())
     )
-    return f"<ul class='dni'>{linie}</ul>"
-
-
-def _renko_obok(serie):
-    probki = [c for _, c in ka.probki_godzinowe(serie)]
-    rozmiar = ka.rozmiar_cegly(probki)
-    if not rozmiar:
-        return "<p class='uwaga'>Za mało danych, żeby pokazać Renko.</p>"
-    cegly, _ = ka.renko(probki, rozmiar)
-    svg = _wykres_renko(cegly)
-    if not svg:
-        return "<p class='uwaga'>Za mało ruchu, żeby pokazać Renko.</p>"
-    return f"<div><p class='uwaga'>Renko (cegła {rozmiar:.4g})</p>{svg}</div>"
+    return ("<table class='dni'><tr><th>Dzień</th><th>Najniższy</th><th>o godz.</th>"
+            f"<th>Najwyższy</th><th>o godz.</th></tr>{wiersze}</table>")
 
 
 def _wykres_panel(symbol, zakres):
