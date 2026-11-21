@@ -1,0 +1,10 @@
+[Unit]
+Description=Uruchamia kolektor kursów co minutę
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Unit=kolektor-rynku.service
+
+[Install]
+WantedBy=timers.target

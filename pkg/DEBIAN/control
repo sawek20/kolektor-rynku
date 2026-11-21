@@ -1,0 +1,11 @@
+Package: kolektor-rynku
+Version: 1.3.4
+Section: utils
+Priority: optional
+Architecture: all
+Depends: python3, python3-matplotlib, systemd
+Maintainer: admin <admin@localhost>
+Description: Kolektor kursów krypto i akcji (co minutę) z panelem www
+ Co minutę zapisuje kursy krypto (CoinGecko) i akcji (Yahoo Finance) do plików CSV
+ w /srv/dane/rynek. Co 30 minut wysyła raport na Telegram; bot odpowiada na komendy "wykres 7", "wykres 30", "kursy", "analiza" (SMA i RSI).
+ Import historii: kolektor_import.py (tryb md dla starego pliku, tryb api dla CoinGecko i Yahoo).

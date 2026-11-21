@@ -1,0 +1,22 @@
+[Unit]
+Description=Panel www kolektora kursów
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=kolektorrynku
+Group=kolektorrynku
+Environment=KOLEKTOR_CONFIG=/etc/kolektor-rynku/config.ini
+ExecStart=/usr/bin/python3 -I /usr/lib/kolektor-rynku/kolektor_www.py
+Restart=on-failure
+RestartSec=5
+StateDirectory=kolektor-rynku
+ReadWritePaths=/etc/kolektor-rynku /srv/dane/rynek
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

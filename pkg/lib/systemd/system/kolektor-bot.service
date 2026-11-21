@@ -1,0 +1,23 @@
+[Unit]
+Description=Bot Telegram kolektora kursów (wykresy i komendy)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=kolektorrynku
+Group=kolektorrynku
+Environment=KOLEKTOR_CONFIG=/etc/kolektor-rynku/config.ini
+Environment=MPLCONFIGDIR=/var/lib/kolektor-rynku/mpl
+ExecStart=/usr/bin/python3 -I /usr/lib/kolektor-rynku/kolektor_bot.py
+Restart=always
+RestartSec=10
+StateDirectory=kolektor-rynku
+ReadWritePaths=/var/lib/kolektor-rynku
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

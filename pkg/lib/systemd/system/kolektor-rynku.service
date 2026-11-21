@@ -1,0 +1,18 @@
+[Unit]
+Description=Kolektor kursów krypto i akcji (jednorazowe pobranie)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=kolektorrynku
+Group=kolektorrynku
+Environment=KOLEKTOR_CONFIG=/etc/kolektor-rynku/config.ini
+ExecStart=/usr/bin/python3 -I /usr/lib/kolektor-rynku/kolektor_rynku.py
+StateDirectory=kolektor-rynku
+ReadWritePaths=/srv/dane/rynek
+TimeoutStartSec=90
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes

@@ -1,0 +1,28 @@
+#!/bin/sh
+set -e
+
+if ! getent passwd kolektorrynku >/dev/null; then
+    adduser --system --group --no-create-home --home /nonexistent kolektorrynku
+fi
+
+mkdir -p /srv/dane/rynek /etc/kolektor-rynku
+chown kolektorrynku:kolektorrynku /srv/dane/rynek
+chmod 0750 /srv/dane/rynek
+
+# Panel zapisuje config, więc katalog i plik należą do usługi.
+# Plik zawiera token bota i hash hasła, więc tylko właściciel i grupa mogą go czytać.
+if [ -f /etc/kolektor-rynku/config.ini ]; then
+    python3 -I /usr/lib/kolektor-rynku/kolektor_www.py --init
+fi
+chown kolektorrynku:kolektorrynku /etc/kolektor-rynku /etc/kolektor-rynku/config.ini
+chmod 0750 /etc/kolektor-rynku
+chmod 0640 /etc/kolektor-rynku/config.ini
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+    systemctl enable --now kolektor-rynku.timer
+    systemctl enable --now kolektor-www.service || true
+    systemctl restart kolektor-www.service || true
+    systemctl enable --now kolektor-bot.service || true
+    systemctl restart kolektor-bot.service || true
+fi
