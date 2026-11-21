@@ -270,8 +270,8 @@ def strona_glowna(cfg, blad, info):
         )
         wiersze.append(
             "<tr>"
-            f"<td><a href='/symbol?s={urllib.parse.quote(symbol)}'>{html.escape(symbol)}</a> "
-            f"<a class='btn' href='/analiza?s={urllib.parse.quote(symbol)}'>Analiza</a></td>"
+            f"<td><a href='/symbol?s={urllib.parse.quote(symbol)}'>{html.escape(symbol)}</a></td>"
+            f"<td><a class='btn' href='/analiza?s={urllib.parse.quote(symbol)}'>Analiza</a></td>"
             "<td><form method='post' class='inline'>"
             f"<input type='hidden' name='symbol' value='{html.escape(symbol)}'>"
             f"<select name='zrodlo'>{opcje}</select> "
@@ -282,7 +282,7 @@ def strona_glowna(cfg, blad, info):
             f"{ostatnia}</tr>"
         )
     tabela = (
-        "<table><tr><th>Symbol</th><th>Źródło i identyfikator</th><th>Ostatnia cena</th>"
+        "<table><tr><th>Symbol</th><th>Analiza</th><th>Źródło i identyfikator</th><th>Ostatnia cena</th>"
         "<th>Status</th><th>Czas (UTC)</th></tr>" + "".join(wiersze) + "</table>"
         if wiersze
         else "<p>Brak symboli. Dodaj poniżej.</p>"
