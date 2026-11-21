@@ -227,6 +227,18 @@ def _dzienne_podsumowanie(serie):
             f"<th>Najwyższy</th><th>o godz.</th></tr>{wiersze}</table>")
 
 
+def _renko_obok(serie):
+    probki = [c for _, c in ka.probki_godzinowe(serie)]
+    rozmiar = ka.rozmiar_cegly(probki)
+    if not rozmiar:
+        return "<p class='uwaga'>Za mało danych, żeby pokazać Renko.</p>"
+    cegly, _ = ka.renko(probki, rozmiar)
+    svg = _wykres_renko(cegly)
+    if not svg:
+        return "<p class='uwaga'>Za mało ruchu, żeby pokazać Renko.</p>"
+    return f"<div><p class='uwaga'>Renko (cegła {rozmiar:.4g})</p>{svg}</div>"
+
+
 def _wykres_panel(symbol, zakres):
     serie = _seria(symbol, zakres)
     punkty = [(t, c) for t, c, _ in serie]
